@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿#pragma once
 #include <stdexcept>
 #include <utility>
@@ -235,3 +236,54 @@ inline void Optional<T>::Emplace(Args && ...args)
     value_ = new (&data_[0]) T(std::forward<Args>(args)...);
     is_initialized_ = true;
 }
+=======
+﻿#include <stdexcept>
+#include <utility>
+
+// Исключение этого типа должно генерироватся при обращении к пустому optional
+class BadOptionalAccess : public std::exception {
+public:
+    using exception::exception;
+
+    virtual const char* what() const noexcept override {
+        return "Bad optional access";
+    }
+};
+
+template <typename T>
+class Optional {
+public:
+    Optional() = default;
+    Optional(const T& value);
+    Optional(T&& value);
+    Optional(const Optional& other);
+    Optional(Optional&& other);
+
+    Optional& operator=(const T& value);
+    Optional& operator=(T&& rhs);
+    Optional& operator=(const Optional& rhs);
+    Optional& operator=(Optional&& rhs);
+
+    ~Optional();
+
+    bool HasValue() const;
+
+    // Операторы * и -> не должны делать никаких проверок на пустоту Optional.
+    // Эти проверки остаются на совести программиста
+    T& operator*();
+    const T& operator*() const;
+    T* operator->();
+    const T* operator->() const;
+
+    // Метод Value() генерирует исключение BadOptionalAccess, если Optional пуст
+    T& Value();
+    const T& Value() const;
+
+    void Reset();
+
+private:
+    // alignas нужен для правильного выравнивания блока памяти
+    alignas(T) char data_[sizeof(T)];
+    bool is_initialized_ = false;
+};
+>>>>>>> 7be885c44619747b4645d9f6966ecab511baa0fe
