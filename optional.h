@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿#pragma once
 #include <stdexcept>
 #include <utility>
@@ -25,7 +24,7 @@ public:
     Optional& operator=(const T& value);
     Optional& operator=(T&& rhs);
     Optional& operator=(const Optional& rhs);
-    Optional& operator=(Optional&& rhs);
+    Optional& operator=(Optional&& rhs) noexcept;
 
     ~Optional();
 
@@ -36,14 +35,18 @@ public:
 
     // Операторы * и -> не должны делать никаких проверок на пустоту Optional.
     // Эти проверки остаются на совести программиста
-    T& operator*();
-    const T& operator*() const;
+    T&& operator*() &&;
+    
+    T& operator*() &;
+    const T& operator*() const&;
     T* operator->();
     const T* operator->() const;
 
     // Метод Value() генерирует исключение BadOptionalAccess, если Optional пуст
-    T& Value();
-    const T& Value() const;
+    T&& Value()&&;
+
+    T& Value() &;
+    const T& Value() const &;
 
     void Reset();
 
@@ -134,7 +137,7 @@ inline Optional<T>& Optional<T>::operator=(const Optional& rhs)
 }
 
 template<typename T>
-inline Optional<T>& Optional<T>::operator=(Optional&& rhs)
+inline Optional<T>& Optional<T>::operator=(Optional&& rhs) noexcept
 {
     if (!is_initialized_) {
         if (rhs.is_initialized_) {
@@ -163,13 +166,18 @@ inline bool Optional<T>::HasValue() const
 }
 
 template<typename T>
-inline T& Optional<T>::operator*()
+inline T&& Optional<T>::operator*() && {
+    return std::move(*value_);
+}
+
+template<typename T>
+inline T& Optional<T>::operator*() &
 {
     return *value_;
 }
 
 template<typename T>
-inline const T& Optional<T>::operator*() const
+inline const T& Optional<T>::operator*() const&
 {
     return *value_;
 }
@@ -187,7 +195,15 @@ inline const T* Optional<T>::operator->() const
 }
 
 template<typename T>
-inline T& Optional<T>::Value()
+inline T&& Optional<T>::Value() && {
+    if (!is_initialized_) {
+        throw BadOptionalAccess();
+    }
+    return std::move(*value_);
+}
+
+template<typename T>
+inline T& Optional<T>::Value() &
 {
     if (!is_initialized_) {
         throw BadOptionalAccess();
@@ -196,7 +212,7 @@ inline T& Optional<T>::Value()
 }
 
 template<typename T>
-inline const T& Optional<T>::Value() const
+inline const T& Optional<T>::Value() const&
 {
     if (!is_initialized_) {
         throw BadOptionalAccess();
@@ -236,54 +252,3 @@ inline void Optional<T>::Emplace(Args && ...args)
     value_ = new (&data_[0]) T(std::forward<Args>(args)...);
     is_initialized_ = true;
 }
-=======
-﻿#include <stdexcept>
-#include <utility>
-
-// Исключение этого типа должно генерироватся при обращении к пустому optional
-class BadOptionalAccess : public std::exception {
-public:
-    using exception::exception;
-
-    virtual const char* what() const noexcept override {
-        return "Bad optional access";
-    }
-};
-
-template <typename T>
-class Optional {
-public:
-    Optional() = default;
-    Optional(const T& value);
-    Optional(T&& value);
-    Optional(const Optional& other);
-    Optional(Optional&& other);
-
-    Optional& operator=(const T& value);
-    Optional& operator=(T&& rhs);
-    Optional& operator=(const Optional& rhs);
-    Optional& operator=(Optional&& rhs);
-
-    ~Optional();
-
-    bool HasValue() const;
-
-    // Операторы * и -> не должны делать никаких проверок на пустоту Optional.
-    // Эти проверки остаются на совести программиста
-    T& operator*();
-    const T& operator*() const;
-    T* operator->();
-    const T* operator->() const;
-
-    // Метод Value() генерирует исключение BadOptionalAccess, если Optional пуст
-    T& Value();
-    const T& Value() const;
-
-    void Reset();
-
-private:
-    // alignas нужен для правильного выравнивания блока памяти
-    alignas(T) char data_[sizeof(T)];
-    bool is_initialized_ = false;
-};
->>>>>>> 7be885c44619747b4645d9f6966ecab511baa0fe
